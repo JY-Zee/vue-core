@@ -188,42 +188,47 @@ export class Dep {
     return link
   }
 
+  // 触发依赖项的更新，增加版本号并通知所有订阅者
   trigger(debugInfo?: DebuggerEventExtraInfo): void {
+    // 每次触发时，增加当前依赖的版本号
     this.version++
+    // 全局版本号也随之增加
     globalVersion++
+    // 通知所有订阅者，传递调试信息
     this.notify(debugInfo)
   }
 
+  // 通知所有订阅者并触发相应的更新
   notify(debugInfo?: DebuggerEventExtraInfo): void {
-    startBatch()
+    startBatch() // 开始一个批处理
     try {
       if (__DEV__) {
-        // subs are notified and batched in reverse-order and then invoked in
-        // original order at the end of the batch, but onTrigger hooks should
-        // be invoked in original order here.
+        // 在开发模式下，通知所有订阅者并按逆序批处理，然后在批处理结束时按原始顺序调用它们，
+        // 但 onTrigger 钩子应该在这里按原始顺序调用。
         for (let head = this.subsHead; head; head = head.nextSub) {
           if (head.sub.onTrigger && !(head.sub.flags & EffectFlags.NOTIFIED)) {
             head.sub.onTrigger(
               extend(
                 {
-                  effect: head.sub,
+                  effect: head.sub, // 传递当前订阅者作为 effect
                 },
-                debugInfo,
+                debugInfo, // 传递调试信息
               ),
             )
           }
         }
       }
+      // 遍历所有订阅者并调用它们的 notify 方法
       for (let link = this.subs; link; link = link.prevSub) {
         if (link.sub.notify()) {
-          // if notify() returns `true`, this is a computed. Also call notify
-          // on its dep - it's called here instead of inside computed's notify
-          // in order to reduce call stack depth.
-          ;(link.sub as ComputedRefImpl).dep.notify()
+          // 如果 notify() 返回 `true`，则表示这是一个计算属性。
+          // 还需要调用其依赖的 notify 方法 - 这里调用而不是在计算属性的 notify 内部调用
+          // 是为了减少调用栈的深度。
+          ;(link.sub as ComputedRefImpl).dep.notify() // 调用计算属性的依赖的 notify 方法
         }
       }
     } finally {
-      endBatch()
+      endBatch() // 结束批处理
     }
   }
 }

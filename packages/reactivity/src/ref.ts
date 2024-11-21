@@ -73,20 +73,20 @@ export type ShallowRef<T = any, S = T> = Ref<T, S> & {
 }
 
 /**
- * Shallow version of {@link ref()}.
+ * {@link ref()} 的浅层版本。
  *
  * @example
  * ```js
  * const state = shallowRef({ count: 1 })
  *
- * // does NOT trigger change
+ * // 不会触发变化
  * state.value.count = 2
  *
- * // does trigger change
+ * // 会触发变化
  * state.value = { count: 2 }
  * ```
  *
- * @param value - The "inner value" for the shallow ref.
+ * @param value - 浅层引用的“内部值”。
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
 export function shallowRef<T>(
@@ -98,7 +98,7 @@ export function shallowRef<T>(
   : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
-  return createRef(value, true)
+  return createRef(value, true) // 创建一个浅层引用
 }
 
 /**
