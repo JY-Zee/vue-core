@@ -337,6 +337,15 @@ export function isReadonly(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
 
+/**
+ * 检查一个对象是否是浅层代理。
+ * 
+ * 浅层代理是指只对对象的第一层属性进行响应式处理，而不对嵌套的属性进行处理。
+ * 这意味着如果一个对象是浅层代理，直接修改其嵌套属性不会触发响应式更新。
+ * 
+ * @param value - 要检查的值。
+ * @returns 如果值是浅层代理，则返回 true；否则返回 false。
+ */
 export function isShallow(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
 }

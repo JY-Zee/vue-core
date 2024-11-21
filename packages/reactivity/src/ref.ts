@@ -46,11 +46,17 @@ export function isRef(r: any): r is Ref {
 }
 
 /**
- * Takes an inner value and returns a reactive and mutable ref object, which
- * has a single property `.value` that points to the inner value.
+ * 接受一个内部值并返回一个响应式且可变的 ref 对象，该对象具有一个指向内部值的单一属性 `.value`。
  *
- * @param value - The object to wrap in the ref.
+ * @param value - 要包装在 ref 中的对象。
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
+ */
+/**
+ * 接受一个内部值并返回一个响应式且可变的 ref 对象，该对象具有一个指向内部值的单一属性 `.value`。
+ * 
+ * @param value - 要包装在 ref 中的对象。
+ * 
+ * @returns 返回一个响应式引用（Ref），如果传入的值是引用类型，则返回 Ref<T>，否则返回 T。
  */
 export function ref<T>(
   value: T,
@@ -95,6 +101,15 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+/**
+ * 创建一个响应式引用。
+ * 
+ * @param rawValue - 要包装的原始值，可以是任意类型。
+ * @param shallow - 一个布尔值，指示是否创建一个浅层引用。
+ * 
+ * 如果传入的值已经是一个响应式引用（Ref），则直接返回该引用。
+ * 否则，创建并返回一个新的 RefImpl 实例，包装传入的原始值。
+ */
 function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
     return rawValue
@@ -103,7 +118,7 @@ function createRef(rawValue: unknown, shallow: boolean) {
 }
 
 /**
- * @internal
+ * @内部
  */
 class RefImpl<T = any> {
   _value: T
@@ -114,12 +129,30 @@ class RefImpl<T = any> {
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
 
+  // 构造函数用于初始化 RefImpl 实例。
+  // 参数 value: T - 这是要包装的值，可以是任意类型。
+  // 参数 isShallow: boolean - 这个布尔值指示是否创建一个浅层引用。
+  // 
+  // 在构造函数中，首先根据 isShallow 的值来决定如何处理 _rawValue 和 _value：
+  // - 如果 isShallow 为 true，_rawValue 和 _value 将直接赋值为传入的 value。
+  // - 如果 isShallow 为 false，则使用 toRaw(value) 将 value 转换为原始值，并使用 toReactive(value) 将其转换为响应式值。
+  // 
+  // 最后，将 isShallow 的值存储在实例的 ReactiveFlags.IS_SHALLOW 属性中，以便后续可以判断该引用是否为浅层引用。
   constructor(value: T, isShallow: boolean) {
     this._rawValue = isShallow ? value : toRaw(value)
     this._value = isShallow ? value : toReactive(value)
     this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
+  // 这是一个 getter 方法，用于获取引用的值。
+  // 当访问 `value` 属性时，首先检查当前环境是否为开发模式（__DEV__）。
+  // 如果是开发模式，调用 `this.dep.track()` 方法来追踪依赖关系，记录当前的目标（this），
+  // 操作类型为 GET，键名为 'value'。这有助于在开发过程中进行调试和追踪。
+  // 如果不是开发模式，则只调用 `this.dep.track()`，不传递任何参数。
+  // 最后，返回 `_value` 属性的值，这个值是引用所包装的实际值。
+  // track 方法用于追踪依赖关系，以便在值发生变化时能够通知相关的副作用（effects）进行更新。
+  // 在开发模式下，它会记录当前的目标（this），操作类型为 GET，以及被访问的键名 'value'。
+  // 这有助于在开发过程中进行调试和追踪。
   get value() {
     if (__DEV__) {
       this.dep.track({
@@ -134,25 +167,44 @@ class RefImpl<T = any> {
   }
 
   set value(newValue) {
-    const oldValue = this._rawValue
+    // 首先，保存当前的原始值，以便后续比较
+    const oldValue = this._rawValue;
+
+    // 判断是否使用直接值的条件：
+    // 1. 如果当前引用是浅层引用
+    // 2. 如果新值是浅层对象
+    // 3. 如果新值是只读对象
     const useDirectValue =
-      this[ReactiveFlags.IS_SHALLOW] ||
-      isShallow(newValue) ||
-      isReadonly(newValue)
-    newValue = useDirectValue ? newValue : toRaw(newValue)
+      this[ReactiveFlags.IS_SHALLOW] || 
+      isShallow(newValue) || 
+      isReadonly(newValue);
+
+    // 如果不使用直接值，则将新值转换为原始值
+    newValue = useDirectValue ? newValue : toRaw(newValue);
+
+    // 检查新值是否与旧值不同
     if (hasChanged(newValue, oldValue)) {
-      this._rawValue = newValue
-      this._value = useDirectValue ? newValue : toReactive(newValue)
+      // 更新原始值和响应式值
+      this._rawValue = newValue;
+      this._value = useDirectValue ? newValue : toReactive(newValue);
+
+      // 在开发模式下，触发依赖更新并记录相关信息
       if (__DEV__) {
+        // 触发依赖更新，通知所有依赖于此引用的副作用（effects）进行更新。
+        // 这个过程确保在值发生变化时，相关的响应式组件或计算属性能够及时反应。
+        // 记录当前的目标（this），操作类型（SET），键名（'value'），
+        // 新值（newValue）和旧值（oldValue），这些信息有助于在开发模式下进行调试和追踪。
+        // 通过这种方式，开发者可以清楚地看到何时以及如何更新了引用的值。
         this.dep.trigger({
-          target: this,
+          target: this, 
           type: TriggerOpTypes.SET,
           key: 'value',
           newValue,
           oldValue,
-        })
+        });
       } else {
-        this.dep.trigger()
+        // 在非开发模式下，仅触发依赖更新
+        this.dep.trigger();
       }
     }
   }

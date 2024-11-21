@@ -140,6 +140,20 @@ export const toHandlerKey: <T extends string>(
 )
 
 // compare whether a value has changed, accounting for NaN.
+/**
+ * 检查一个值是否与另一个值不同。
+ * 该函数使用 Object.is 方法来比较两个值。
+ * 
+ * Object.is 方法的行为与严格相等（===）相似，但在某些情况下有不同的处理：
+ * 1. NaN: Object.is(NaN, NaN) 返回 true，而使用 === 则返回 false。
+ * 2. +0 和 -0: Object.is(+0, -0) 返回 false，而使用 === 则返回 true。
+ * 
+ * 因此，hasChanged 函数可以准确地判断两个值是否不同，包括处理 NaN 和 0 的情况。
+ * 
+ * @param value - 要比较的新值。
+ * @param oldValue - 要比较的旧值。
+ * @returns 如果值不同则返回 true，否则返回 false。
+ */
 export const hasChanged = (value: any, oldValue: any): boolean =>
   !Object.is(value, oldValue)
 
